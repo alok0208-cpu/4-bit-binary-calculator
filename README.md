@@ -244,5 +244,75 @@ $$15 + 15 = 30$$
 In binary, $30_{10}$ is equal to $11110_2$. 
 Since four bits can only represent up to 15, the final carry out ($COUT$) acts as the indispensable fifth, most-significant result bit to prevent overflow
 
-<img width="1300" height="1160" alt="adder_4bit_ripple_carry" src="https://github.com/user-attachments/assets/644c6e06-25c4-4a93-a070-7a76a3d594dd" />
+<img width="1251" height="1600" alt="WhatsApp Image 2026-11-11 at 17 36 26" src="https://github.com/user-attachments/assets/51f53a45-60ec-413b-a756-bd94ed04f572" />
+
+
+
+# 5-Bit Binary to BCD Converter (Gate-Level Logic)
+
+This module is a pure hardware, combinational logic circuit that converts a 5-bit binary input (values 0–31) into a 2-digit Binary-Coded Decimal (BCD) format. It acts as the final output stage of the discrete calculator, directly driving two common-cathode 7-segment displays without the use of microcontrollers, EEPROMs, or pre-packaged converter ICs.
+
+## ⚙️ System Architecture
+
+The converter takes the 5-bit output from the adder (4 sum bits + 1 carry out) and translates it into two 4-bit BCD nibbles representing the Tens and Units digits.
+
+*   **Inputs:** `B4` (MSB, weight 16), `B3` (weight 8), `B2` (weight 4), `B1` (weight 2), `B0` (LSB, weight 1).
+*   **Outputs:** Tens Digit (`T3 T2 T1 T0`), Units Digit (`U3 U2 U1 U0`).
+*   **Algorithm:** A gate-level implementation of the Double Dabble (shift-and-add-3) algorithm, optimized specifically for a 5-bit maximum input (decimal 31).
+
+## 🧮 Boolean Logic Calculations
+
+Rather than using a general-purpose memory lookup, the conversion is achieved entirely through custom combinational logic gates. 
+
+### Tens Digit (T)
+Since the maximum decimal value is 31, the Tens digit can only ever be 0, 1, 2, or 3. Therefore, the upper two bits (`T3` and `T2`) are tied directly to ground (LOW).
+
+$$T_3 = 0$$
+$$T_2 = 0$$
+$$T_1 = B_4(B_2 + B_3)$$
+$$T_0 = B_1B_2B_3 + B_1B_3\overline{B_4} + B_2B_3\overline{B_4} + B_4\overline{B_2}\overline{B_3}$$
+
+### Units Digit (U)
+The Least Significant Bit (LSB) of the binary input always matches the LSB of the BCD units digit. The remaining bits require complex combinational mapping.
+
+$$U_0 = B_0$$
+$$U_1 = B_1B_2\overline{B_3} + B_1\overline{B_3}\overline{B_4} + B_1B_3B_4\overline{B_2} + B_2B_3\overline{B_1}\overline{B_4} + B_4\overline{B_1}\overline{B_2}\overline{B_3}$$
+$$U_2 = B_1B_2\overline{B_4} + B_3B_4\overline{B_2} + B_2\overline{B_3}\overline{B_4} + B_4\overline{B_1}\overline{B_2}$$
+$$U_3 = B_2B_3B_4\overline{B_1} + B_1B_4\overline{B_2}\overline{B_3} + B_3\overline{B_1}\overline{B_2}\overline{B_4}$$
+
+*(Note: $\overline{B}$ denotes the NOT/inverted state of the bit).*
+
+## 🛠️ Hardware Stack & Implementation
+
+To process these equations efficiently, the circuit utilizes a mix of multi-input logic gates and switching transistors.
+
+*   **74HC04 (Hex Inverter):** Generates all complemented inputs ($\overline{B_1}$ through $\overline{B_4}$).
+*   **CD4081 (Quad 2-Input AND):** Cascaded to handle logical multiplication.
+*   **CD4001 (Quad 2-Input NOR):** Used in conjunction with other logic to form complex OR conditions.
+*   **74HC86 (Quad 2-Input XOR):** Utilized where logic optimization requires exclusive-OR operations.
+*   **BC547 (NPN Transistors):** Used for signal switching, boosting, and buffering intermediate signals across the breadboard.
+*   **7448 BCD-to-7-Segment Decoder (x2):** Drives the common-cathode displays.
+
+## 🔌 7448 Display Driver Setup
+
+Once the combinational logic calculates the `T` and `U` nibbles, the signals are fed into two 7448 decoder ICs.
+
+| 7448 Pin | Connection | Purpose |
+| :--- | :--- | :--- |
+| **7, 1, 2, 6** | `B0, B1, B2, B3` | Target BCD Input Nibble (`T` or `U`) |
+| **3 (LT)** | +5V | Lamp Test (Active LOW) |
+| **4 (BI/RBO)** | +5V | Blanking Input (Active LOW) |
+| **5 (RBI)** | +5V | Ripple Blanking Input (Active LOW) |
+| **8** | GND | Ground |
+| **16** | +5V | Logic Power |
+| **a-g outputs** | Resistors ➔ Display | Connects to Common-Cathode 7-Seg |
+
+## 🧪 Testing Verification
+
+Before connecting the 7448 drivers and displays, the BCD conversion logic should be tested independently using 8 LEDs on the intermediate outputs. 
+
+**Example Test Case:** 
+Supplying the binary input `10101` (Decimal 21) must yield the following LED states:
+*   **Tens LEDs ($T_3 T_2 T_1 T_0$):** `0 0 1 0` (Decimal 2)
+*   **Units LEDs ($U_3 U_2 U_1 U_0$):** `0 0 0 1` (Decimal 1)
 
