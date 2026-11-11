@@ -27,8 +27,9 @@ This calculator is constructed using a mix of High-Speed CMOS (74HC series) and 
     *   7-Segment Displays for output visualization.
     *   DIP switches/push buttons for binary input.
     *   5V DC Power Supply.
+    *   
+🚀 Operation
 
- 🚀 Operation
 Input Operand A: Enter the first digit via the 4-bit BCD interface.
 
 Store: Trigger the SR latch to save the first operand into memory.
