@@ -152,25 +152,94 @@ For an active-HIGH NOR-based SR latch:
 
 The two cross-coupled NOR gates provide the feedback required for storing the previous output state.
 
-# 4-Bit Binary Adder (Discrete Logic)
+# 4-Bit Ripple-Carry Binary Adder
 
-A purely hardware-based 4-bit ripple-carry adder built entirely from fundamental logic gates. Instead of using a dedicated adder IC (like the 74LS83/74HC283) or a microcontroller, this project demonstrates how arithmetic logic units (ALUs) compute addition at the lowest architectural level using AND, OR, and NOT gates.
+A purely hardware-based 4-bit binary adder built entirely from discrete logic gates. It adds two 4-bit unsigned binary numbers and produces a 5-bit result using four cascaded full-adder stages.
 
-## ⚙️ Logic Architecture
+## 🔌 1. Inputs and Outputs
 
-The 4-bit adder is constructed by cascading individual adder circuits to process 4-bit binary inputs (Operand A and Operand B):
-*   **Bit 0 (LSB):** Uses a **Half Adder** (or a Full Adder with Carry-In grounded) to compute the initial sum and carry-out.
-*   **Bits 1-3:** Use **Full Adders** that take bit A, bit B, and the Carry-In from the previous stage to calculate the Sum and propagate the Carry-Out.
-*   **Bit 4 (Carry-Out):** The final carry-out serves as the 5th bit (MSB) of the result, allowing the circuit to compute sums up to 31 (binary `11111`).
+**Inputs:**
+* **Operand A:** `A3 A2 A1 A0`
+* **Operand B:** `B3 B2 B1 B0`
+* **Initial Carry:** `C0 = 0` (Tied LOW)
 
-## 🛠️ Hardware Stack
+**Outputs:**
+* **Sum:** `SUM3 SUM2 SUM1 SUM0`
+* **Final Carry:** `COUT` (Serves as the Most Significant Bit)
+* **Complete 5-bit Result:** `COUT SUM3 SUM2 SUM1 SUM0`
 
-This build utilizes High-Speed CMOS (74HC series) and 4000-series logic ICs to construct the XOR, AND, and OR logic required for binary addition.
+---
 
-*   **CD4081BE:** Quad 2-Input AND Gate (Used for carry generation)
-*   **Quad 2-Input OR Gate IC:** (e.g., 74HC32) (Used for carry propagation)
-*   **SN74HC04N:** Hex Inverter / NOT Gate (Used in combination with AND/OR gates to construct XOR logic if dedicated XOR ICs are not used)
-*   **Inputs:** 8-position DIP switch for entering 4-bit Operand A and 4-bit Operand B.
-*   **Outputs:** 5 LEDs (4 for the sum, 1 for the final carry-out).
+## 🏗️ 2. Block Diagram
 
-![Uploading adder_4bit_ripple_carry.svg…]()
+The carry output of each stage feeds directly into the carry input of the next stage. This arrangement is known as a **ripple-carry adder**.
+
+* `A0, B0, C0=0` ➔ **Full Adder 0** ➔ `SUM0, C1`
+* `A1, B1, C1  ` ➔ **Full Adder 1** ➔ `SUM1, C2`
+* `A2, B2, C2  ` ➔ **Full Adder 2** ➔ `SUM2, C3`
+* `A3, B3, C3  ` ➔ **Full Adder 3** ➔ `SUM3, COUT`
+
+---
+
+## 🧩 3. Hardware Gates Used
+
+Each full-adder stage is constructed from combining two half-adders:
+* **2** XOR gates
+* **2** AND gates
+* **1** OR gate
+
+**Total for 4 Stages:** 8 XOR gates, 8 AND gates, and 4 OR gates.
+
+---
+
+## 🧮 4. Logic Theory & Equations
+
+### Half-Adder
+A half-adder adds two single-bit inputs, A and B.
+* **Sum** (HIGH when inputs differ): $S = A \oplus B$
+* **Carry** (HIGH when both inputs are HIGH): $C = A \cdot B$
+
+### Full-Adder
+A full-adder combines three bits: A, B, and the Carry-In ($Cin$) from the previous stage. By combining two half-adders, the equations are:
+
+* **Sum:** 
+  $$SUM = A \oplus B \oplus Cin$$
+* **Carry-Out:** 
+  $$Cout = AB + Cin(A \oplus B)$$
+  *(Equivalent to: $Cout = AB + ACin + BCin$)*
+
+**Full-Adder Truth Table:**
+
+| A | B | Cin | SUM | Cout |
+|---|---|-----|-----|------|
+| 0 | 0 | 0   | 0   | 0    |
+| 0 | 0 | 1   | 1   | 0    |
+| 0 | 1 | 0   | 1   | 0    |
+| 0 | 1 | 1   | 0   | 1    |
+| 1 | 0 | 0   | 1   | 0    |
+| 1 | 0 | 1   | 0   | 1    |
+| 1 | 1 | 0   | 0   | 1    |
+| 1 | 1 | 1   | 1   | 1    |
+
+---
+
+## 📊 5. Four-Bit Adder Stage Equations
+
+Setting the initial carry $C_0 = 0$, the propagation ($P_i$) and generation for each bit ($i = 0, 1, 2, 3$) is evaluated as:
+
+* **Bit 0:** $P_0 = A_0 \oplus B_0$ | $SUM_0 = P_0 \oplus C_0$ | $C_1 = A_0B_0 + P_0C_0$
+* **Bit 1:** $P_1 = A_1 \oplus B_1$ | $SUM_1 = P_1 \oplus C_1$ | $C_2 = A_1B_1 + P_1C_1$
+* **Bit 2:** $P_2 = A_2 \oplus B_2$ | $SUM_2 = P_2 \oplus C_2$ | $C_3 = A_2B_2 + P_2C_2$
+* **Bit 3:** $P_3 = A_3 \oplus B_3$ | $SUM_3 = P_3 \oplus C_3$ | $C_4 = A_3B_3 + P_3C_3$
+
+The final carry is $COUT = C_4$.
+
+---
+
+## ❓ 6. Why is the output five bits?
+
+A 4-bit unsigned binary number ranges from 0 to 15 ($1111_2$). 
+The largest possible sum of two 4-bit numbers is:
+$$15 + 15 = 30$$
+In binary, $30_{10}$ is equal to $11110_2$. 
+Since four bits can only represent up to 15, the final carry out ($COUT$) acts as the indispensable fifth, most-significant result bit to prevent overflow.
